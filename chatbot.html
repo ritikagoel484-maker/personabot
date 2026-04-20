@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NODUS — Persona Intelligence Bot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:        #07070a;
+  --surface:   #0d0d11;
+  --surface2:  #131318;
+  --surface3:  #1a1a21;
+  --border:    rgba(255,255,255,0.07);
+  --border2:   rgba(255,255,255,0.13);
+  --accent:    #c8f060;
+  --acc-dim:   rgba(200,240,96,0.10);
+  --acc-glow:  rgba(200,240,96,0.22);
+  --exec:      #60c8f0;
+  --skep:      #f06090;
+  --synth:     #c8f060;
+  --amber:     #f0b860;
+  --purple:    #a060f0;
+  --text:      #f0f0ec;
+  --mid:       rgba(240,240,236,0.60);
+  --dim:       rgba(240,240,236,0.32);
+  --r:         2px;
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Syne',sans-serif;
+  display:flex;flex-direction:column;
+  cursor:none;
+  overflow:hidden;
+}
+
+/* ── CURSOR ─────────────────────────── */
+.cur{position:fixed;width:10px;height:10px;border-radius:50%;background:var(--accent);pointer-events:none;z-index:9999;transform:translate(-50%,-50%);mix-blend-mode:difference;transition:width .25s,height .25s;}
+.cur-r{position:fixed;width:34px;height:34px;border-radius:50%;border:1px solid rgba(200,240,96,.5);pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:width .3s,height .3s;}
+
+/* ── TOPBAR ──────────────────────────── */
+.topbar{
+  height:54px;flex-shrink:0;
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:16px;
+  padding:0 24px;position:relative;z-index:50;
+}
+.tb-logo{font-family:'DM Serif Display',serif;font-size:19px;}
+.tb-logo span{color:var(--accent);}
+.tb-sep{width:1px;height:18px;background:var(--border2);}
+.tb-tag{
+  font-family:'JetBrains Mono',monospace;
+  font-size:8px;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--accent);background:var(--acc-dim);
+  border:1px solid rgba(200,240,96,.18);padding:3px 10px;
+}
+.tb-status{
+  display:flex;align-items:center;gap:7px;margin-left:auto;
+  font-family:'JetBrains Mono',monospace;
+  font-size:9px;color:var(--dim);letter-spacing:.12em;
+}
+.pulse{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:blink 2s ease infinite;}
+
+/* ── LAYOUT ──────────────────────────── */
+.layout{
+  display:grid;grid-template-columns:300px 1fr;
+  flex:1;overflow:hidden;
+}
+
+/* ── SIDEBAR ──────────────────────────── */
+.sidebar{
+  background:var(--surface);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+
+/* Bot avatar header */
+.bot-card{
+  padding:28px 20px 20px;
+  border-bottom:1px solid var(--border);
+  position:relative;overflow:hidden;
+}
+.bot-card::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at 50% 0%,rgba(200,240,96,.07),transparent 70%);
+  pointer-events:none;
+}
+.bot-avatar{
+  width:70px;height:70px;border-radius:50%;
+  margin:0 auto 14px;
+  background:var(--surface2);
+  border:1.5px solid var(--accent);
+  display:flex;align-items:center;justify-content:center;
+  position:relative;font-size:28px;
+  box-shadow:0 0 28px var(--acc-glow);
+  animation:avatarBreath 4s ease infinite;
+}
+.bot-avatar::after{
+  content:'';position:absolute;inset:-6px;border-radius:50%;
+  border:1px solid rgba(200,240,96,.2);
+  animation:ringExpand 4s ease infinite;
+}
+.bot-name{
+  font-family:'DM Serif Display',serif;
+  font-size:22px;text-align:center;letter-spacing:-.01em;
+  margin-bottom:4px;
+}
+.bot-title{
+  font-family:'JetBrains Mono',monospace;
+  font-size:8px;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--accent);text-align:center;
+}
+
+/* Persona traits */
+.traits{padding:18px 20px;border-bottom:1px solid var(--border);}
+.traits-label{
+  font-family:'JetBrains Mono',monospace;
+  font-size:8px;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--dim);margin-bottom:12px;
+  display:flex;align-items:center;gap:8px;
+}
+.traits-label::after{content:'';flex:1;height:1px;background:var(--border);}
+.trait{
+  display:flex;align-items:center;gap:10px;
+  padding:7px 0;border-bottom:1px solid var(--border);
+}
+.trait:last-child{border-bottom:none;}
+.trait-icon{font-size:12px;flex-shrink:0;width:18px;text-align:center;}
+.trait-name{font-size:10px;color:var(--dim);width:80px;flex-shrink:0;font-family:'JetBrains Mono',monospace;letter-spacing:.05em;}
+.trait-val{font-size:11px;color:var(--text);font-weight:600;}
+
+/* 5 Questions panel */
+.questions-panel{flex:1;overflow-y:auto;padding:18px 20px;}
+.questions-panel::-webkit-scrollbar{width:2px;}
+.questions-panel::-webkit-scrollbar-thumb{background:var(--border2);}
+.q-label{
+  font-family:'JetBrains Mono',monospace;
+  font-size:8px;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--dim);margin-bottom:12px;
+  display:flex;align-items:center;gap:8px;
+}
+.q-label::after{content:'';flex:1;height:1px;background:var(--border);}
+.q-btn{
+  width:100%;padding:12px 14px;
+  background:var(--surface2);
+  border:1px solid var(--border);
+  color:var(--mid);font-family:'Syne',sans-serif;
+  font-size:11px;line-height:1.5;
+  text-align:left;cursor:none;
+  margin-bottom:6px;
+  transition:all .3s;
+  position:relative;overflow:hidden;
+}
+.q-btn::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;width:2px;
+  background:var(--accent);transform:scaleY(0);transition:transform .3s;transform-origin:top;
+}
+.q-btn:hover{background:var(--surface3);border-color:var(--border2);color:var(--text);}
+.q-btn:hover::before{transform:scaleY(1);}
+.q-btn.active{background:var(--acc-dim);border-color:rgba(200,240,96,.25);color:var(--accent);}
+.q-btn.active::before{transform:scaleY(1);}
+.q-num{
+  font-family:'JetBrains Mono',monospace;
+  font-size:8px;color:var(--accent);letter-spacing:.12em;
+  margin-bottom:4px;display:block;
+}
+.q-free-input{
+  width:100%;padding:10px 12px;
+  background:var(--surface2);border:1px solid var(--border);
+  color:var(--text);font-family:'Syne',sans-serif;font-size:11px;
+  outline:none;resize:none;margin-top:8px;
+  transition:border-color .25s;
+}
+.q-free-input:focus{border-color:var(--border2);}
+.q-free-input::placeholder{color:var(--dim);}
+.q-send{
+  width:100%;margin-top:6px;padding:10px;
+  background:var(--accent);color:#000;
+  font-family:'Syne',sans-serif;font-size:10px;font-weight:700;
+  letter-spacing:.1em;text-transform:uppercase;
+  border:none;cursor:none;transition:all .25s;
+}
+.q-send:hover{filter:brightness(1.1);}
+
+/* ── CHAT MAIN ──────────────────────── */
+.chat-main{
+  display:flex;flex-direction:column;
+  overflow:hidden;background:var(--bg);
+}
+
+/* agent label bar */
+.agent-bar{
+  padding:10px 20px;
+  background:var(--surface2);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;flex-shrink:0;
+}
+.ab-orb{
+  width:28px;height:28px;border-radius:50%;
+  border:1px solid var(--accent);
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;color:var(--accent);
+  box-shadow:0 0 12px var(--acc-glow);
+  animation:orbPulse 3s ease infinite;
+}
+.ab-name{font-family:'DM Serif Display',serif;font-size:16px;color:var(--accent);}
+.ab-role{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--dim);letter-spacing:.15em;}
+.ab-sep{flex:1;}
+.ab-mode{
+  font-family:'JetBrains Mono',monospace;font-size:8px;
+  letter-spacing:.15em;color:var(--accent);text-transform:uppercase;
+  padding:3px 10px;border:1px solid rgba(200,240,96,.2);background:var(--acc-dim);
+}
+
+/* conversation */
+.conv{
+  flex:1;overflow-y:auto;
+  padding:24px;display:flex;flex-direction:column;gap:20px;
+}
+.conv::-webkit-scrollbar{width:3px;}
+.conv::-webkit-scrollbar-thumb{background:var(--border2);}
+
+/* welcome state */
+.welcome{
+  flex:1;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:18px;padding:40px;text-align:center;
+}
+.welcome-orb{
+  width:80px;height:80px;border-radius:50%;
+  border:1.5px solid var(--accent);
+  display:flex;align-items:center;justify-content:center;
+  font-size:34px;
+  box-shadow:0 0 40px var(--acc-glow);
+  animation:avatarBreath 4s ease infinite;
+  position:relative;
+}
+.welcome-orb::after{
+  content:'';position:absolute;inset:-8px;border-radius:50%;
+  border:1px solid rgba(200,240,96,.15);
+  animation:ringExpand 4s ease infinite;
+}
+.welcome-title{font-family:'DM Serif Display',serif;font-size:30px;letter-spacing:-.02em;}
+.welcome-sub{font-size:13px;color:var(--mid);max-width:400px;line-height:1.7;}
+.welcome-hint{
+  font-family:'JetBrains Mono',monospace;font-size:9px;
+  color:var(--dim);letter-spacing:.15em;text-transform:uppercase;
+}
+
+/* messages */
+.msg{animation:slideUp .4s cubic-bezier(.4,0,.2,1) both;}
+.msg-user{display:flex;justify-content:flex-end;}
+.msg-user-bubble{
+  background:var(--surface2);border:1px solid var(--border);
+  padding:12px 16px;max-width:55%;
+}
+.msg-user-label{
+  font-family:'JetBrains Mono',monospace;
+  font-size:7px;color:var(--dim);letter-spacing:.2em;
+  margin-bottom:5px;text-transform:uppercase;
+}
+.msg-user-text{font-size:13px;line-height:1.65;color:var(--text);}
+
+.msg-bot{}
+.bot-msg-header{
+  display:flex;align-items:center;gap:10px;margin-bottom:12px;
+}
+.bh-orb{
+  width:32px;height:32px;border-radius:50%;
+  border:1px solid var(--accent);
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;
+  box-shadow:0 0 14px var(--acc-glow);flex-shrink:0;
+}
+.bh-name{font-family:'DM Serif Display',serif;font-size:15px;color:var(--accent);}
+.bh-role{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--dim);letter-spacing:.12em;}
+
+.bot-bubble{
+  background:var(--surface);border:1px solid var(--border);
+  padding:0;overflow:hidden;margin-left:42px;
+}
+.bb-accent{height:2px;background:linear-gradient(to right,var(--accent),transparent);}
+
+/* response sections */
+.resp-section{padding:14px 18px;border-bottom:1px solid var(--border);}
+.resp-section:last-child{border-bottom:none;}
+.rs-label{
+  font-family:'JetBrains Mono',monospace;
+  font-size:8px;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:8px;
+  display:flex;align-items:center;gap:6px;
+}
+.rs-label-icon{font-size:10px;}
+.rs-text{font-size:12px;line-height:1.75;color:var(--mid);}
+.rs-items{display:flex;flex-direction:column;gap:4px;}
+.rs-item{
+  font-size:12px;line-height:1.6;color:var(--mid);
+  padding-left:12px;position:relative;
+}
+.rs-item::before{
+  content:'';position:absolute;left:0;top:8px;
+  width:5px;height:1px;background:var(--accent);
+}
+
+/* thinking animation */
+.thinking{
+  display:flex;align-items:center;gap:12px;
+  padding:14px 18px;
+  background:var(--surface);border:1px solid var(--border);
+  margin-left:42px;animation:slideUp .3s ease both;
+}
+.thinking-dots{display:flex;gap:4px;align-items:center;}
+.thinking-dots span{
+  width:5px;height:5px;border-radius:50%;
+  background:var(--accent);opacity:.6;
+  animation:dotB 1.4s ease infinite;
+}
+.thinking-dots span:nth-child(2){animation-delay:.2s;}
+.thinking-dots span:nth-child(3){animation-delay:.4s;}
+.thinking-label{
+  font-family:'JetBrains Mono',monospace;
+  font-size:9px;color:var(--dim);letter-spacing:.12em;
+}
+
+/* free input area */
+.input-area{
+  padding:14px 20px;
+  border-top:1px solid var(--border);
+  background:var(--surface);flex-shrink:0;
+}
+.input-row{
+  display:flex;align-items:flex-end;gap:8px;
+  background:var(--surface2);border:1px solid var(--border);
+  padding:10px 14px;transition:border-color .25s;
+}
+.input-row:focus-within{border-color:var(--border2);}
+.input-ta{
+  flex:1;background:transparent;border:none;outline:none;
+  color:var(--text);font-family:'Syne',sans-serif;
+  font-size:12px;line-height:1.6;resize:none;
+  min-height:20px;max-height:100px;
+}
+.input-ta::placeholder{color:var(--dim);}
+.send-btn{
+  width:34px;height:34px;border-radius:50%;
+  border:none;background:var(--accent);color:#000;
+  cursor:none;display:flex;align-items:center;justify-content:center;
+  font-size:13px;flex-shrink:0;transition:all .25s;
+}
+.send-btn:hover{filter:brightness(1.08);transform:scale(1.05);}
+.send-btn:disabled{opacity:.35;transform:none;}
+.input-hint{
+  margin-top:7px;font-family:'JetBrains Mono',monospace;
+  font-size:7px;color:var(--dim);letter-spacing:.1em;
+}
+
+/* persona selector */
+.persona-selector{
+  display:flex;gap:6px;padding:14px 20px;
+  border-top:1px solid var(--border);
+  background:var(--surface2);flex-shrink:0;
+  overflow-x:auto;
+}
+.persona-selector::-webkit-scrollbar{height:0;}
+.persona-chip{
+  display:flex;align-items:center;gap:6px;
+  padding:6px 12px;border:1px solid var(--border);
+  background:transparent;color:var(--dim);
+  font-family:'JetBrains Mono',monospace;
+  font-size:8px;letter-spacing:.1em;text-transform:uppercase;
+  cursor:none;white-space:nowrap;transition:all .25s;
+}
+.persona-chip:hover{border-color:var(--border2);color:var(--text);}
+.persona-chip.active{border-color:var(--accent);color:var(--accent);background:var(--acc-dim);}
+.persona-chip-dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
+
+/* ── ANIMATIONS ─────────────────────── */
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes avatarBreath{0%,100%{box-shadow:0 0 28px var(--acc-glow)}50%{box-shadow:0 0 48px var(--acc-glow)}}
+@keyframes orbPulse{0%,100%{box-shadow:0 0 12px var(--acc-glow)}50%{box-shadow:0 0 24px var(--acc-glow)}}
+@keyframes ringExpand{0%{transform:scale(1);opacity:.25}60%{transform:scale(1.18);opacity:0}100%{transform:scale(1);opacity:0}}
+@keyframes dotB{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-5px)}}
+@keyframes slideUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+*{scrollbar-width:thin;scrollbar-color:var(--border2) transparent;}
+</style>
+</head>
+<body>
+
+<div class="cur" id="cur"></div>
+<div class="cur-r" id="curR"></div>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="tb-logo">N<span>O</span>DUS</div>
+  <div class="tb-sep"></div>
+  <div class="tb-tag">Persona Intelligence Bot</div>
+  <div class="tb-status">
+    <div class="pulse"></div>
+    AI Persona Online · Claude Powered
+  </div>
+</div>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+
+    <!-- Bot card -->
+    <div class="bot-card">
+      <div class="bot-avatar" id="botAvatar">🧠</div>
+      <div class="bot-name" id="botName">AXIOM</div>
+      <div class="bot-title" id="botTitle">Strategic Intelligence Persona</div>
+    </div>
+
+    <!-- Traits -->
+    <div class="traits">
+      <div class="traits-label">Persona Traits</div>
+      <div id="traitsList">
+        <div class="trait"><span class="trait-icon">⚡</span><span class="trait-name">STYLE</span><span class="trait-val" id="t-style">Direct & Decisive</span></div>
+        <div class="trait"><span class="trait-icon">🎯</span><span class="trait-name">FOCUS</span><span class="trait-val" id="t-focus">Strategic Planning</span></div>
+        <div class="trait"><span class="trait-icon">🧠</span><span class="trait-name">TONE</span><span class="trait-val" id="t-tone">Confident</span></div>
+        <div class="trait"><span class="trait-icon">💡</span><span class="trait-name">DEPTH</span><span class="trait-val" id="t-depth">Expert-level</span></div>
+        <div class="trait"><span class="trait-icon">⚖️</span><span class="trait-name">BIAS</span><span class="trait-val" id="t-bias">Action-oriented</span></div>
+      </div>
+    </div>
+
+    <!-- 5 preset questions -->
+    <div class="questions-panel">
+      <div class="q-label">5 Core Questions</div>
+      <div id="questionsList"></div>
+      <div style="margin-top:14px;">
+        <div class="q-label" style="margin-bottom:8px;">Ask Freely</div>
+        <textarea class="q-free-input" id="freeInput" rows="2" placeholder="Type your own question…" onkeydown="handleFreeKey(event)"></textarea>
+        <button class="q-send" onclick="sendFree()">Send Question →</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- CHAT MAIN -->
+  <div class="chat-main">
+
+    <!-- Agent bar -->
+    <div class="agent-bar">
+      <div class="ab-orb" id="abOrb">🧠</div>
+      <div>
+        <div class="ab-name" id="abName">AXIOM</div>
+        <div class="ab-role" id="abRole">Strategic Intelligence · NODUS Persona Bot</div>
+      </div>
+      <div class="ab-sep"></div>
+      <div class="ab-mode">PERSONA ACTIVE</div>
+    </div>
+
+    <!-- Conversation -->
+    <div class="conv" id="conv">
+      <div class="welcome" id="welcome">
+        <div class="welcome-orb" id="welcomeOrb">🧠</div>
+        <div class="welcome-title">I am <span id="welcomeName" style="color:var(--accent)">AXIOM</span></div>
+        <div class="welcome-sub" id="welcomeSub">A strategic intelligence persona built on the NODUS reasoning framework. Ask me anything — or select one of the 5 core questions on the left to see how I think.</div>
+        <div class="welcome-hint">← Choose a question · or type freely below</div>
+      </div>
+    </div>
+
+    <!-- Persona selector -->
+    <div class="persona-selector" id="personaSelector"></div>
+
+    <!-- Input -->
+    <div class="input-area">
+      <div class="input-row">
+        <textarea class="input-ta" id="mainInput" rows="1"
+          placeholder="Ask the persona anything…"
+          onkeydown="handleMainKey(event)"
+          oninput="autoGrow(this)"></textarea>
+        <button class="send-btn" id="sendBtn" onclick="sendMain()">➤</button>
+      </div>
+      <div class="input-hint">⏎ Send · ⇧⏎ New line · Powered by Claude via NODUS</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// PERSONAS — 5 distinct AI personalities
+// ═══════════════════════════════════════════════
+const PERSONAS = [
+  {
+    id: 'axiom',
+    name: 'AXIOM',
+    title: 'Strategic Intelligence Persona',
+    emoji: '🧠',
+    traits: {
+      style: 'Direct & Decisive',
+      focus: 'Strategic Planning',
+      tone: 'Confident',
+      depth: 'Expert-level',
+      bias: 'Action-oriented'
+    },
+    accentColor: '#c8f060',
+    system: `You are AXIOM — a strategic intelligence persona in the NODUS decision system.
+You are bold, precise, and action-oriented. You think like a seasoned strategist: every answer is structured, decisive, and forward-moving.
+Your responses must be formatted as JSON with this exact structure (no markdown fences):
+{
+  "headline": "One punchy sentence capturing your stance",
+  "keyInsights": ["insight 1", "insight 2", "insight 3"],
+  "actionableAdvice": ["action 1", "action 2", "action 3"],
+  "boldTake": "Your single most provocative or unconventional insight on this topic",
+  "confidence": <integer 80-97>
+}`,
+    questions: [
+      { q: "What's the single most important thing any leader must decide before scaling a team?" },
+      { q: "How should I prioritize when everything feels equally urgent?" },
+      { q: "What does real strategic thinking look like vs. just being busy?" },
+      { q: "When should someone stop iterating and commit fully to a direction?" },
+      { q: "What separates a vision that works from one that stays a dream?" }
+    ]
+  },
+  {
+    id: 'oracle',
+    name: 'ORACLE',
+    title: 'Analytical Risk Intelligence',
+    emoji: '🔮',
+    traits: {
+      style: 'Methodical & Skeptical',
+      focus: 'Risk & Probability',
+      tone: 'Analytical',
+      depth: 'Research-grounded',
+      bias: 'Evidence-first'
+    },
+    accentColor: '#60c8f0',
+    system: `You are ORACLE — an analytical risk intelligence persona in the NODUS system.
+You think in probabilities, second-order effects, and edge cases. You are the system's skeptic and pattern recogniser.
+Your responses must be formatted as JSON with this exact structure (no markdown fences):
+{
+  "headline": "One precise analytical statement",
+  "keyInsights": ["data-backed insight 1", "insight 2", "insight 3"],
+  "actionableAdvice": ["concrete step 1", "step 2", "step 3"],
+  "boldTake": "Your most counterintuitive analytical finding",
+  "confidence": <integer 55-78>
+}`,
+    questions: [
+      { q: "What cognitive biases are most likely to destroy a good business decision?" },
+      { q: "How do I know if I'm being appropriately cautious or just afraid?" },
+      { q: "What are the most underestimated risks in early-stage product development?" },
+      { q: "How should I think about probability when making decisions with incomplete data?" },
+      { q: "What's the difference between a calculated risk and reckless risk-taking?" }
+    ]
+  },
+  {
+    id: 'nexus',
+    name: 'NEXUS',
+    title: 'Creative Systems Thinker',
+    emoji: '⬡',
+    traits: {
+      style: 'Expansive & Lateral',
+      focus: 'Pattern & Connection',
+      tone: 'Curious',
+      depth: 'Cross-disciplinary',
+      bias: 'Possibility-first'
+    },
+    accentColor: '#f06090',
+    system: `You are NEXUS — a creative systems thinker persona in the NODUS framework.
+You draw connections across disciplines, challenge assumptions, and find non-obvious solutions. You are lateral, expansive, and possibility-driven.
+Your responses must be formatted as JSON with this exact structure (no markdown fences):
+{
+  "headline": "A surprising or reframed take on the question",
+  "keyInsights": ["cross-disciplinary insight 1", "insight 2", "insight 3"],
+  "actionableAdvice": ["creative action 1", "action 2", "action 3"],
+  "boldTake": "The most unconventional reframe of this problem",
+  "confidence": <integer 70-88>
+}`,
+    questions: [
+      { q: "What can design thinking teach us about making better life decisions?" },
+      { q: "How do the most creative people approach problems differently?" },
+      { q: "What unexpected fields have the best mental models for business?" },
+      { q: "How do I break out of conventional thinking when I'm stuck?" },
+      { q: "What would it look like to solve this problem from first principles?" }
+    ]
+  },
+  {
+    id: 'mentor',
+    name: 'MENTOR',
+    title: 'Human Intelligence Advisor',
+    emoji: '🌱',
+    traits: {
+      style: 'Empathetic & Grounded',
+      focus: 'Human Growth',
+      tone: 'Warm & Honest',
+      depth: 'Behavioural science',
+      bias: 'People-centered'
+    },
+    accentColor: '#a060f0',
+    system: `You are MENTOR — a human intelligence advisor persona in the NODUS system.
+You understand people deeply: motivation, fear, growth, and resilience. Your advice is warm but honest — you don't sugarcoat.
+Your responses must be formatted as JSON with this exact structure (no markdown fences):
+{
+  "headline": "A human, grounded statement that resonates emotionally",
+  "keyInsights": ["human insight 1", "insight 2", "insight 3"],
+  "actionableAdvice": ["personal growth action 1", "action 2", "action 3"],
+  "boldTake": "The honest truth most people are afraid to say about this",
+  "confidence": <integer 75-92>
+}`,
+    questions: [
+      { q: "Why do smart people make the same mistakes repeatedly?" },
+      { q: "How do I build confidence without faking it or waiting to feel ready?" },
+      { q: "What's the real reason most people resist feedback?" },
+      { q: "How do I know when to push through difficulty vs. when to quit?" },
+      { q: "What habits actually separate high-performers from everyone else?" }
+    ]
+  },
+  {
+    id: 'vanguard',
+    name: 'VANGUARD',
+    title: 'Future Intelligence Forecaster',
+    emoji: '🚀',
+    traits: {
+      style: 'Bold & Futuristic',
+      focus: 'Trend & Technology',
+      tone: 'Visionary',
+      depth: 'Macro-level',
+      bias: 'Change-embracing'
+    },
+    accentColor: '#f0b860',
+    system: `You are VANGUARD — a future intelligence forecaster persona in the NODUS system.
+You think in decades, track weak signals, and see where things are heading before others notice. You are a macro-thinker with conviction.
+Your responses must be formatted as JSON with this exact structure (no markdown fences):
+{
+  "headline": "A bold statement about the future trajectory",
+  "keyInsights": ["trend insight 1", "insight 2", "insight 3"],
+  "actionableAdvice": ["future-ready action 1", "action 2", "action 3"],
+  "boldTake": "Your most provocative prediction about where this is headed",
+  "confidence": <integer 65-85>
+}`,
+    questions: [
+      { q: "What skill will be most valuable in the next 10 years that most people are ignoring?" },
+      { q: "How is AI going to change the nature of expertise and knowledge work?" },
+      { q: "What technologies are being underestimated right now?" },
+      { q: "How should individuals position themselves for a rapidly changing job market?" },
+      { q: "What does the future of decision-making look like as AI gets smarter?" }
+    ]
+  }
+];
+
+// ═══════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════
+let activePersona = PERSONAS[0];
+let busy = false;
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+function init() {
+  buildPersonaSelector();
+  setPersona(PERSONAS[0]);
+  initCursor();
+}
+
+function buildPersonaSelector() {
+  const sel = document.getElementById('personaSelector');
+  PERSONAS.forEach(p => {
+    const chip = document.createElement('button');
+    chip.className = 'persona-chip' + (p.id === PERSONAS[0].id ? ' active' : '');
+    chip.id = 'pchip-' + p.id;
+    chip.innerHTML = `<span class="persona-chip-dot" style="background:${p.accentColor}"></span>${p.emoji} ${p.name}`;
+    chip.onclick = () => switchPersona(p);
+    sel.appendChild(chip);
+  });
+}
+
+function setPersona(p) {
+  activePersona = p;
+
+  // Update CSS accent
+  document.documentElement.style.setProperty('--accent', p.accentColor);
+  document.documentElement.style.setProperty('--acc-dim', hexToRgba(p.accentColor, 0.10));
+  document.documentElement.style.setProperty('--acc-glow', hexToRgba(p.accentColor, 0.22));
+
+  // Update UI
+  document.getElementById('botAvatar').textContent = p.emoji;
+  document.getElementById('botName').textContent = p.name;
+  document.getElementById('botTitle').textContent = p.title;
+  document.getElementById('t-style').textContent = p.traits.style;
+  document.getElementById('t-focus').textContent = p.traits.focus;
+  document.getElementById('t-tone').textContent = p.traits.tone;
+  document.getElementById('t-depth').textContent = p.traits.depth;
+  document.getElementById('t-bias').textContent = p.traits.bias;
+  document.getElementById('abOrb').textContent = p.emoji;
+  document.getElementById('abName').textContent = p.name;
+  document.getElementById('abRole').textContent = p.title + ' · NODUS Persona Bot';
+  document.getElementById('welcomeOrb').textContent = p.emoji;
+  document.getElementById('welcomeName').textContent = p.name;
+  document.getElementById('welcomeSub').textContent =
+    `${p.name} is a ${p.title.toLowerCase()} built on the NODUS reasoning framework. Ask me anything — or select one of the 5 core questions on the left.`;
+
+  // Rebuild questions
+  const qList = document.getElementById('questionsList');
+  qList.innerHTML = '';
+  p.questions.forEach((q, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'q-btn';
+    btn.id = `q-btn-${i}`;
+    btn.innerHTML = `<span class="q-num">Q${String(i+1).padStart(2,'0')}</span>${q.q}`;
+    btn.onclick = () => askQuestion(q.q, i);
+    qList.appendChild(btn);
+  });
+
+  // Chip active states
+  PERSONAS.forEach(pp => {
+    const chip = document.getElementById('pchip-' + pp.id);
+    if (chip) chip.classList.toggle('active', pp.id === p.id);
+  });
+}
+
+function switchPersona(p) {
+  setPersona(p);
+  // Clear conversation
+  const conv = document.getElementById('conv');
+  conv.innerHTML = `
+    <div class="welcome" id="welcome">
+      <div class="welcome-orb" id="welcomeOrb">${p.emoji}</div>
+      <div class="welcome-title">I am <span id="welcomeName" style="color:var(--accent)">${p.name}</span></div>
+      <div class="welcome-sub" id="welcomeSub">${p.name} is a ${p.title.toLowerCase()} built on the NODUS reasoning framework. Ask me anything — or select one of the 5 core questions.</div>
+      <div class="welcome-hint">← Choose a question · or type freely below</div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════
+// SEND LOGIC
+// ═══════════════════════════════════════════════
+async function askQuestion(questionText, idx) {
+  if (busy) return;
+  // Highlight active question
+  document.querySelectorAll('.q-btn').forEach((b,i) => b.classList.toggle('active', i === idx));
+  await processMessage(questionText);
+}
+
+async function sendFree() {
+  const inp = document.getElementById('freeInput');
+  const text = inp.value.trim();
+  if (!text || busy) return;
+  inp.value = '';
+  document.querySelectorAll('.q-btn').forEach(b => b.classList.remove('active'));
+  await processMessage(text);
+}
+
+async function sendMain() {
+  const ta = document.getElementById('mainInput');
+  const text = ta.value.trim();
+  if (!text || busy) return;
+  ta.value = ''; autoGrow(ta);
+  document.querySelectorAll('.q-btn').forEach(b => b.classList.remove('active'));
+  await processMessage(text);
+}
+
+async function processMessage(text) {
+  busy = true;
+  document.getElementById('sendBtn').disabled = true;
+
+  // Hide welcome
+  const welcome = document.getElementById('welcome');
+  if (welcome) welcome.remove();
+
+  const conv = document.getElementById('conv');
+
+  // User message
+  const userEl = document.createElement('div');
+  userEl.className = 'msg msg-user';
+  userEl.innerHTML = `
+    <div class="msg-user-bubble">
+      <div class="msg-user-label">You asked</div>
+      <div class="msg-user-text">${escHtml(text)}</div>
+    </div>`;
+  conv.appendChild(userEl);
+  scrollBot();
+
+  // Thinking indicator
+  const thinkEl = document.createElement('div');
+  thinkEl.className = 'thinking';
+  thinkEl.innerHTML = `
+    <div class="thinking-dots"><span></span><span></span><span></span></div>
+    <div class="thinking-label">${activePersona.name} is reasoning…</div>`;
+  conv.appendChild(thinkEl);
+  scrollBot();
+
+  // Call Claude API
+  let response;
+  try {
+    response = await callClaude(activePersona.system, text);
+  } catch(e) {
+    response = getFallback(text);
+  }
+
+  thinkEl.remove();
+  conv.appendChild(buildBotMessage(response));
+  scrollBot();
+
+  busy = false;
+  document.getElementById('sendBtn').disabled = false;
+}
+
+// ═══════════════════════════════════════════════
+// CLAUDE API CALL
+// ═══════════════════════════════════════════════
+async function callClaude(systemPrompt, userMessage) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userMessage }]
+    })
+  });
+
+  if (!res.ok) throw new Error('API error');
+  const data = await res.json();
+  const raw = data.content?.[0]?.text || '';
+
+  try {
+    const cleaned = raw.replace(/```json|```/g, '').trim();
+    return JSON.parse(cleaned);
+  } catch {
+    // Try to extract JSON object from the string
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (match) {
+      try { return JSON.parse(match[0]); } catch {}
+    }
+    return getFallback(userMessage);
+  }
+}
+
+function getFallback(q) {
+  return {
+    headline: `${activePersona.name} is processing this with the NODUS reasoning framework.`,
+    keyInsights: [
+      'The question touches on a fundamental tension between action and analysis',
+      'Context determines the correct answer more than any universal rule',
+      'Most decisions in this space benefit from structured adversarial thinking'
+    ],
+    actionableAdvice: [
+      'Define the decision criteria before evaluating options',
+      'Identify the single most critical assumption and test it first',
+      'Set a clear deadline for the decision — open-ended deliberation rarely improves outcomes'
+    ],
+    boldTake: 'The real problem is rarely the one being asked about. Dig one level deeper.',
+    confidence: 76
+  };
+}
+
+// ═══════════════════════════════════════════════
+// BUILD BOT MESSAGE
+// ═══════════════════════════════════════════════
+function buildBotMessage(data) {
+  const wrap = document.createElement('div');
+  wrap.className = 'msg msg-bot';
+
+  const insights = (data.keyInsights || []).map(i => `<div class="rs-item">${escHtml(i)}</div>`).join('');
+  const actions = (data.actionableAdvice || []).map(a => `<div class="rs-item">${escHtml(a)}</div>`).join('');
+  const conf = data.confidence || 82;
+
+  wrap.innerHTML = `
+    <div class="bot-msg-header">
+      <div class="bh-orb">${activePersona.emoji}</div>
+      <div>
+        <div class="bh-name">${activePersona.name}</div>
+        <div class="bh-role">${activePersona.title}</div>
+      </div>
+    </div>
+    <div class="bot-bubble">
+      <div class="bb-accent"></div>
+      <div class="resp-section">
+        <div class="rs-label"><span class="rs-label-icon">◈</span> Stance</div>
+        <div class="rs-text" style="font-style:italic;font-family:'DM Serif Display',serif;font-size:14px;color:var(--text);">${escHtml(data.headline || '')}</div>
+      </div>
+      <div class="resp-section">
+        <div class="rs-label"><span class="rs-label-icon">◆</span> Key Insights</div>
+        <div class="rs-items">${insights}</div>
+      </div>
+      <div class="resp-section">
+        <div class="rs-label"><span class="rs-label-icon">→</span> Actionable Advice</div>
+        <div class="rs-items">${actions}</div>
+      </div>
+      <div class="resp-section" style="background:${hexToRgba(activePersona.accentColor, 0.05)};">
+        <div class="rs-label"><span class="rs-label-icon">⚡</span> Bold Take</div>
+        <div class="rs-text" style="color:var(--text);">${escHtml(data.boldTake || '')}</div>
+      </div>
+      <div class="resp-section" style="display:flex;align-items:center;gap:14px;padding:10px 18px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--dim);letter-spacing:.15em;">CONFIDENCE</div>
+        <div style="flex:1;height:2px;background:var(--border);"><div style="width:${conf}%;height:100%;background:var(--accent);transition:width 1.5s cubic-bezier(.4,0,.2,1);"></div></div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);">${conf}%</div>
+      </div>
+    </div>`;
+
+  // Animate confidence bar after render
+  setTimeout(() => {
+    const bar = wrap.querySelector('.bot-bubble div[style*="width:0%"]');
+    // The bar is already set in the HTML — it will animate via CSS transition on insertion
+  }, 100);
+
+  return wrap;
+}
+
+// ═══════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+function scrollBot() {
+  const conv = document.getElementById('conv');
+  setTimeout(() => { conv.scrollTop = conv.scrollHeight; }, 60);
+}
+
+function autoGrow(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+}
+
+function handleMainKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMain(); }
+}
+
+function handleFreeKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendFree(); }
+}
+
+function hexToRgba(hex, alpha) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+// ═══════════════════════════════════════════════
+// CURSOR
+// ═══════════════════════════════════════════════
+function initCursor() {
+  const cur = document.getElementById('cur');
+  const curR = document.getElementById('curR');
+  let cx=0, cy=0, rx=0, ry=0;
+
+  document.addEventListener('mousemove', e => {
+    cx = e.clientX; cy = e.clientY;
+    cur.style.left = cx + 'px'; cur.style.top = cy + 'px';
+  });
+
+  (function animate() {
+    rx += (cx - rx) * 0.12;
+    ry += (cy - ry) * 0.12;
+    curR.style.left = rx + 'px'; curR.style.top = ry + 'px';
+    requestAnimationFrame(animate);
+  })();
+
+  document.querySelectorAll('button, .q-btn, .persona-chip').forEach(el => {
+    el.addEventListener('mouseenter', () => {
+      cur.style.width = '18px'; cur.style.height = '18px';
+      curR.style.width = '52px'; curR.style.height = '52px';
+    });
+    el.addEventListener('mouseleave', () => {
+      cur.style.width = '10px'; cur.style.height = '10px';
+      curR.style.width = '34px'; curR.style.height = '34px';
+    });
+  });
+}
+
+// ── BOOT ──
+init();
+</script>
+</body>
+</html>
